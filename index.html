@@ -1,17 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orientation App</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HoldSense — Alarm</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="app">
-        <h1>Rotate your device</h1>
-        <p>The content will change based on how you hold your phone.</p>
-    </div>
+  <div class="container">
+    <header>
+      <h1>HoldSense</h1>
+      <div id="orientationLabel" class="muted">Detecting orientation…</div>
+    </header>
 
-    <script src="script.js"></script>
+    <main id="app" class="card">
+      <p class="center">Rotate your phone to portrait upright to use the Alarm.</p>
+    </main>
+
+    <footer class="muted small">Portrait ↑ = Alarm</footer>
+  </div>
+
+  <!-- audio used for alarm -->
+  <audio id="alarmSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+  </audio>
+
+  <!-- fullscreen alarm overlay -->
+  <div id="alarmOverlay" class="overlay hidden">
+    <div class="overlayContent">
+      <div class="overlayTitle">⏰ ALARM</div>
+      <div id="overlayMsg" class="overlayMsg">Time's up!</div>
+      <div class="overlayButtons">
+        <button id="stopAlarmBtn" class="bigBtn">Stop</button>
+        <button id="snoozeAlarmBtn" class="bigBtn">Snooze 5m</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
