@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>HoldSense — Alarm</title>
+  <title>HoldSense — Orientation App</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -14,15 +14,24 @@
     </header>
 
     <main id="app" class="card">
-      <p class="center">Rotate your phone to portrait upright to use the Alarm.</p>
+      <p class="center">Rotate your phone to use features:</p>
+      <ul class="muted">
+        <li>Portrait ↑ — Alarm Clock</li>
+        <li>Landscape → — Stopwatch (hours:mins:secs:ms)</li>
+        <li>Portrait ↓ — Timer</li>
+        <li>Landscape ← — Weather of the Day</li>
+      </ul>
     </main>
 
-    <footer class="muted small">Portrait ↑ = Alarm</footer>
+    <footer class="muted small">Mobile-first • Runs entirely in the browser</footer>
   </div>
 
-  <!-- audio used for alarm -->
+  <!-- sounds -->
   <audio id="alarmSound" preload="auto">
     <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+  </audio>
+  <audio id="timerBeep" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
   </audio>
 
   <!-- fullscreen alarm overlay -->

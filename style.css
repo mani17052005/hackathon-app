@@ -16,6 +16,7 @@ input[type=time], input[type=number], input[type=text]{
 button{
   padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:inherit;font-size:1rem;margin:6px;min-width:80px
 }
+/* Big buttons for mobile */
 .bigBtn {
   padding: 14px 18px;
   font-size: 1.05rem;
@@ -24,6 +25,8 @@ button{
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
 }
+.bigBtn:hover{ background: rgba(255,255,255,0.12); }
+.stat{font-size:2.2rem;font-weight:600;margin-top:8px}
 .notice{color:var(--muted);margin-top:8px}
 
 /* Overlay (fullscreen alarm) */
@@ -45,3 +48,4 @@ button{
   .overlayContent{width:92%}
   .bigBtn{min-width:90px}
 }
+ul { padding-left: 18px; color: var(--muted); }

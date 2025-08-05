@@ -1,23 +1,27 @@
-/* Alarm-only focused HoldSense (portrait-primary -> Alarm)
-   Mobile-friendly: 'Enable Alarm Sound' + vibration + fullscreen overlay + snooze
+/* Final HoldSense — full app
+   Mappings:
+   portrait-primary  -> Alarm (upright)
+   portrait-secondary-> Timer (upside-down)
+   landscape-primary -> Stopwatch (right-side up)
+   landscape-secondary-> Weather (other landscape)
 */
 
-/* DOM refs */
+/* ---------- DOM refs ---------- */
 const orientationLabel = document.getElementById('orientationLabel');
 const app = document.getElementById('app');
 const alarmSound = document.getElementById('alarmSound');
+const timerBeep = document.getElementById('timerBeep');
 const alarmOverlay = document.getElementById('alarmOverlay');
 const overlayMsg = document.getElementById('overlayMsg');
 const stopAlarmBtn = document.getElementById('stopAlarmBtn');
 const snoozeAlarmBtn = document.getElementById('snoozeAlarmBtn');
 
-/* Alarm state */
+/* ========== ALARM ========== */
 let alarmInterval = null;
-let alarmTimeVal = null;       // "HH:MM" string
+let alarmTimeVal = null;
 let alarmSoundEnabled = false;
 let isRinging = false;
 
-/* Render Alarm UI (shown when in portrait-primary) */
 function renderAlarm(){
   app.innerHTML = `
     <div class="center">
@@ -34,17 +38,14 @@ function renderAlarm(){
     </div>
   `;
 
-  // wire buttons
   document.getElementById('enableAlarmSound').addEventListener('click', enableAlarmSound);
   document.getElementById('setAlarmBtn').addEventListener('click', setAlarmHandler);
   document.getElementById('cancelAlarmBtn').addEventListener('click', cancelAlarmHandler);
 
-  // overlay controls
   stopAlarmBtn.addEventListener('click', stopAlarm);
   snoozeAlarmBtn.addEventListener('click', snoozeAlarm);
 }
 
-/* Unlock audio playback by playing & pausing (must be user gesture) */
 function enableAlarmSound(){
   alarmSound.play().then(()=>{
     alarmSound.pause();
@@ -57,7 +58,6 @@ function enableAlarmSound(){
   });
 }
 
-/* Set alarm button handler */
 function setAlarmHandler(){
   const val = document.getElementById('alarmTime').value;
   const statusEl = document.getElementById('alarmStatus');
@@ -71,7 +71,6 @@ function setAlarmHandler(){
   alarmInterval = setInterval(checkAlarm, 1000);
 }
 
-/* Cancel alarm button */
 function cancelAlarmHandler(){
   if(alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
   alarmTimeVal = null;
@@ -79,11 +78,9 @@ function cancelAlarmHandler(){
   if(statusEl) statusEl.textContent = 'No alarm set';
 }
 
-/* Check every second whether alarm time reached */
 function checkAlarm(){
   if(!alarmTimeVal) return;
   const now = new Date();
-  // Alarm input returns "HH:MM" in 24h format.
   const [h,m] = alarmTimeVal.split(':').map(Number);
   if(now.getHours() === h && now.getMinutes() === m && now.getSeconds() === 0){
     triggerAlarm();
@@ -93,28 +90,24 @@ function checkAlarm(){
   }
 }
 
-/* Trigger the alarm: visual + sound + vibrate */
 function triggerAlarm(){
   if(isRinging) return;
   isRinging = true;
 
-  // show overlay
+  // overlay
   alarmOverlay.classList.remove('hidden');
   overlayMsg.textContent = "⏰ Time's up!";
 
-  // play sound if enabled
   if(alarmSoundEnabled){
     alarmSound.loop = true;
     alarmSound.play().catch(err => console.warn('Play failed', err));
   }
 
-  // vibrate (Android)
   if(navigator.vibrate){
-    try { navigator.vibrate([600,200,600,200,600]); } catch(e){/*ignore*/ }
+    try { navigator.vibrate([600,200,600]); } catch(e) {}
   }
 }
 
-/* Stop alarm (stop sound + hide overlay + stop vibration) */
 function stopAlarm(){
   if(alarmSound && !alarmSound.paused){
     alarmSound.pause();
@@ -127,10 +120,8 @@ function stopAlarm(){
   if(statusEl) statusEl.textContent = 'No alarm set';
 }
 
-/* Snooze alarm for 5 minutes */
 function snoozeAlarm(){
   stopAlarm();
-  // set snooze for 5 minutes from now
   const now = new Date(Date.now() + 5 * 60000);
   const hh = String(now.getHours()).padStart(2,'0');
   const mm = String(now.getMinutes()).padStart(2,'0');
@@ -141,7 +132,180 @@ function snoozeAlarm(){
   alarmInterval = setInterval(checkAlarm, 1000);
 }
 
-/* ---------------- Orientation detection (portrait-primary shows Alarm) ---------------- */
+/* ========== STOPWATCH (hours:mins:secs:ms + laps) ========== */
+let stopwatchInterval = null;
+let stopwatchTime = 0; // ms
+let lapTimes = [];
+
+function renderStopwatch(){
+  app.innerHTML = `
+    <div class="center">
+      <div class="muted">Stopwatch (landscape right — hours:mins:secs:ms)</div>
+      <div id="stopwatch" class="stat">0:00:00:000</div>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+        <button id="swStart" class="bigBtn">Start</button>
+        <button id="swStop" class="bigBtn">Stop</button>
+        <button id="swLap" class="bigBtn">Lap</button>
+        <button id="swReset" class="bigBtn">Reset</button>
+      </div>
+      <div id="lapList" class="notice" style="margin-top:12px;text-align:left;max-height:200px;overflow:auto;"></div>
+    </div>
+  `;
+  document.getElementById('swStart').addEventListener('click', startStopwatch);
+  document.getElementById('swStop').addEventListener('click', stopStopwatch);
+  document.getElementById('swLap').addEventListener('click', addLap);
+  document.getElementById('swReset').addEventListener('click', resetStopwatch);
+}
+
+function startStopwatch(){
+  if (stopwatchInterval) return;
+  const start = Date.now() - stopwatchTime;
+  stopwatchInterval = setInterval(() => {
+    stopwatchTime = Date.now() - start;
+    const el = document.getElementById('stopwatch');
+    if (el) el.textContent = formatHMSms(stopwatchTime);
+  }, 10);
+}
+
+function stopStopwatch(){
+  if (stopwatchInterval) { clearInterval(stopwatchInterval); stopwatchInterval = null; }
+}
+
+function resetStopwatch(){
+  stopStopwatch();
+  stopwatchTime = 0;
+  lapTimes = [];
+  const sw = document.getElementById('stopwatch');
+  if (sw) sw.textContent = '0:00:00:000';
+  const lapList = document.getElementById('lapList');
+  if (lapList) lapList.innerHTML = '';
+}
+
+function addLap(){
+  if (stopwatchTime === 0) return;
+  lapTimes.push(stopwatchTime);
+  renderLaps();
+}
+
+function renderLaps(){
+  const lapList = document.getElementById('lapList');
+  if (!lapList) return;
+  lapList.innerHTML = lapTimes.map((t,i)=>`<div>Lap ${i+1}: ${formatHMSms(t)}</div>`).join('');
+}
+
+function formatHMSms(ms){
+  const hours = Math.floor(ms / 3600000);
+  const mins = Math.floor((ms % 3600000) / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  const millis = ms % 1000;
+  return `${hours}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}:${String(millis).padStart(3,'0')}`;
+}
+
+/* ========== TIMER ========== */
+let timerInterval = null;
+let timerRemaining = 0;
+
+function renderTimer(){
+  app.innerHTML = `
+    <div class="center">
+      <div class="muted">Timer (portrait upside-down)</div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap">
+        <input id="timerMin" type="number" min="0" placeholder="min" style="width:90px">
+        <input id="timerSec" type="number" min="0" max="59" placeholder="sec" style="width:90px">
+        <button id="setTimerBtn" class="bigBtn">Set</button>
+      </div>
+      <div id="timerDisplay" class="stat">00:00</div>
+      <div style="margin-top:10px">
+        <button id="timerStart" class="bigBtn">Start</button>
+        <button id="timerPause" class="bigBtn">Pause</button>
+        <button id="timerReset" class="bigBtn">Reset</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('setTimerBtn').addEventListener('click', ()=>{
+    const m = parseInt(document.getElementById('timerMin').value||0,10);
+    const s = parseInt(document.getElementById('timerSec').value||0,10);
+    timerRemaining = (m*60 + s) * 1000;
+    updateTimerDisplay();
+  });
+  document.getElementById('timerStart').addEventListener('click', startTimer);
+  document.getElementById('timerPause').addEventListener('click', pauseTimer);
+  document.getElementById('timerReset').addEventListener('click', resetTimer);
+}
+
+function updateTimerDisplay(){
+  const sec = Math.ceil(timerRemaining/1000);
+  const mm = String(Math.floor(sec/60)).padStart(2,'0');
+  const ss = String(sec%60).padStart(2,'0');
+  const el = document.getElementById('timerDisplay');
+  if(el) el.textContent = `${mm}:${ss}`;
+}
+
+function startTimer(){
+  if(timerInterval || timerRemaining<=0) return;
+  let last = Date.now();
+  timerInterval = setInterval(()=>{
+    const now = Date.now();
+    timerRemaining -= (now - last);
+    last = now;
+    if(timerRemaining <= 0){
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerRemaining = 0;
+      updateTimerDisplay();
+      timerBeep.play().catch(()=>{});
+      alert("Timer finished!");
+      return;
+    }
+    updateTimerDisplay();
+  }, 200);
+}
+
+function pauseTimer(){ if(timerInterval){ clearInterval(timerInterval); timerInterval = null; } }
+function resetTimer(){ if(timerInterval) clearInterval(timerInterval); timerInterval=null; timerRemaining=0; updateTimerDisplay(); }
+
+/* ========== WEATHER ========== */
+async function renderWeather(){
+  app.innerHTML = `
+    <div class="center">
+      <div class="muted">Weather of the Day (landscape opposite)</div>
+      <div style="margin-top:12px">
+        <div id="weatherLoc" class="stat">—</div>
+        <div id="weatherDesc" class="notice">Tap refresh to fetch weather</div>
+        <div style="margin-top:12px">
+          <button id="refreshWeather" class="bigBtn">Refresh Weather</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('refreshWeather').addEventListener('click', fetchWeather);
+}
+
+async function fetchWeather(){
+  // NOTE: this demo includes the key client-side. For production hide the key using a serverless proxy.
+  const apiKey = "357c34ab8062a8aaf991e47747413147";
+  if(!navigator.geolocation){ document.getElementById('weatherDesc').textContent='Geolocation not available.'; return; }
+  document.getElementById('weatherDesc').textContent = 'Getting location…';
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const {latitude, longitude} = pos.coords;
+    document.getElementById('weatherDesc').textContent = 'Fetching weather…';
+    try{
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`;
+      const r = await fetch(url);
+      if(!r.ok) throw new Error('Bad response');
+      const data = await r.json();
+      document.getElementById('weatherLoc').textContent = `${data.name} • ${Math.round(data.main.temp)}°C`;
+      document.getElementById('weatherDesc').textContent = `${data.weather?.[0]?.main || ''} — ${data.weather?.[0]?.description || ''}`;
+    }catch(err){
+      console.error(err);
+      document.getElementById('weatherDesc').textContent = 'Weather fetch failed — check API or CORS.';
+    }
+  }, err=>{
+    document.getElementById('weatherDesc').textContent = 'Location denied or unavailable.';
+  }, {timeout:10000});
+}
+
+/* ========== ORIENTATION MAPPING ========== */
 function mapOrientation(type, angle){
   orientationLabel.textContent = `${type || 'unknown'} (${angle ?? 'n/a'}°)`;
   if(!type){
@@ -150,23 +314,17 @@ function mapOrientation(type, angle){
     else if(angle === 90) type = 'landscape-primary';
     else if(angle === -90 || angle === 270) type = 'landscape-secondary';
   }
-
-  // we only render the Alarm UI on portrait-primary; otherwise show hint
-  if(type === 'portrait-primary'){
-    renderAlarm();
-  } else {
-    // show friendly hint message in app
-    app.innerHTML = `
-      <div class="center">
-        <div class="muted">Hold your phone upright (portrait) to use the Alarm.</div>
-        <div class="notice" style="margin-top:12px">Current orientation: ${type}</div>
-      </div>
-    `;
+  switch(type){
+    case 'portrait-primary': renderAlarm(); break;
+    case 'portrait-secondary': renderTimer(); break;
+    case 'landscape-primary': renderStopwatch(); break;
+    case 'landscape-secondary': renderWeather(); break;
+    default: renderAlarm(); break;
   }
 }
 
 function handleOrientationChange(){
-  try {
+  try{
     const so = screen.orientation || screen.mozOrientation || screen.msOrientation;
     if(so && so.type !== undefined){
       mapOrientation(so.type, so.angle);
@@ -175,19 +333,19 @@ function handleOrientationChange(){
     } else {
       mapOrientation('portrait-primary', 0);
     }
-  } catch(e){
+  }catch(e){
     mapOrientation('portrait-primary', 0);
   }
 }
 
-/* Listen for orientation changes */
 if(screen.orientation && screen.orientation.addEventListener){
   screen.orientation.addEventListener('change', handleOrientationChange);
 } else {
   window.addEventListener('orientationchange', handleOrientationChange);
 }
+handleOrientationChange();
 
-/* deviceorientation fallback (rough) */
+/* deviceorientation fallback for older devices */
 if(!(screen.orientation && screen.orientation.type)){
   window.addEventListener('deviceorientation', ev=>{
     const g = ev.gamma; const b = ev.beta;
@@ -197,6 +355,3 @@ if(!(screen.orientation && screen.orientation.type)){
     else if(g < -20) mapOrientation('landscape-secondary', 270);
   });
 }
-
-/* initial render */
-handleOrientationChange();
