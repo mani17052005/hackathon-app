@@ -3,27 +3,43 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>HoldSense — Orientation App</title>
+  <title>HoldSense — Polished UI</title>
+
+  <!-- Digital font for clocks + UI font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>HoldSense</h1>
-      <div id="orientationLabel" class="muted">Detecting orientation…</div>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#g)"></rect>
+          <defs>
+            <linearGradient id="g" x1="0" x2="1">
+              <stop offset="0" stop-color="#06b6d4"/>
+              <stop offset="1" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="app-title">HoldSense</span>
+      </div>
+      <div id="orientationLabel" class="muted small">Detecting orientation…</div>
     </header>
 
-    <main id="app" class="card">
-      <p class="center">Rotate your phone to use features:</p>
-      <ul class="muted">
-        <li>Portrait ↑ — Alarm Clock</li>
-        <li>Landscape → — Stopwatch (hours:mins:secs:ms)</li>
-        <li>Portrait ↓ — Timer</li>
-        <li>Landscape ← — Weather (live location)</li>
-      </ul>
+    <main id="app" class="card pane center">
+      <div class="welcome">
+        <h2>Rotate your phone</h2>
+        <p class="muted">Portrait ↑ = Alarm • Landscape → = Stopwatch • Portrait ↓ = Timer • Landscape ← = Weather</p>
+        <div class="cta-row">
+          <button id="demoEnableSound" class="bigBtn">Enable Alarm Sound</button>
+          <button id="demoRefreshWeather" class="bigBtn ghost">Refresh Weather</button>
+        </div>
+      </div>
     </main>
 
-    <footer class="muted small">Mobile-first • Runs entirely in the browser</footer>
+    <footer class="foot muted small">Mobile-first • Works in-browser • Test on phone</footer>
   </div>
 
   <!-- audio elements -->
@@ -32,14 +48,14 @@
     <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
   </audio>
 
-  <!-- fullscreen alarm overlay -->
+  <!-- alarm overlay -->
   <div id="alarmOverlay" class="overlay hidden" role="dialog" aria-modal="true">
     <div class="overlayContent">
       <div class="overlayTitle">⏰ ALARM</div>
       <div id="overlayMsg" class="overlayMsg">Time's up!</div>
       <div class="overlayButtons">
         <button id="stopAlarmBtn" class="bigBtn">Stop</button>
-        <button id="snoozeAlarmBtn" class="bigBtn">Snooze 5m</button>
+        <button id="snoozeAlarmBtn" class="bigBtn ghost">Snooze 5m</button>
       </div>
     </div>
   </div>

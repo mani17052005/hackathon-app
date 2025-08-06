@@ -1,13 +1,13 @@
-/* HoldSense — final fully updated script
-   - Includes Alarm (custom tones), Stopwatch (hrs:min:sec:ms + laps),
-     Timer, and upgraded Weather (live location + hourly + sunrise/sunset + dynamic bg).
-   - OPENWEATHER_API_KEY embedded below.
+/* Polished HoldSense — UI hooks + full app logic
+   - Adds mode class toggles for nicer background transitions
+   - Keep full feature set: Alarm, Stopwatch, Timer, Weather (live)
 */
 
 /* ========== CONFIG ========== */
-const OPENWEATHER_API_KEY = "357c34ab8062a8aaf991e47747413147"; // your key
+const OPENWEATHER_API_KEY = "357c34ab8062a8aaf991e47747413147";
 
 /* ========== DOM refs ========== */
+const shell = document.querySelector('.app-shell');
 const orientationLabel = document.getElementById('orientationLabel');
 const app = document.getElementById('app');
 const alarmOverlay = document.getElementById('alarmOverlay');
@@ -16,15 +16,22 @@ const stopAlarmBtn = document.getElementById('stopAlarmBtn');
 const snoozeAlarmBtn = document.getElementById('snoozeAlarmBtn');
 const alarmAudio = document.getElementById('alarmAudio');
 const timerBeep = document.getElementById('timerBeep');
+const demoEnableSound = document.getElementById('demoEnableSound');
+const demoRefreshWeather = document.getElementById('demoRefreshWeather');
 
-/* ========== STATE ========== */
+/* ========== State ========== */
 let alarmInterval = null, alarmTimeVal = null, alarmSoundEnabled = false, isRinging=false;
 let stopwatchInterval=null, stopwatchTime=0, lapTimes=[];
 let timerInterval=null, timerRemaining=0;
 let cachedWeather = null;
 
-/* ========== HELPERS ========== */
+/* ========== Helpers ========== */
 function safeQuery(sel){ return document.querySelector(sel); }
+function setModeClass(mode){
+  // remove previous mode classes then add
+  shell.classList.remove('mode-alarm','mode-stopwatch','mode-timer','mode-weather');
+  if(mode) shell.classList.add(`mode-${mode}`);
+}
 function pad(n, w=2){ return String(n).padStart(w,'0'); }
 function formatHMSms(ms){
   const hours = Math.floor(ms/3600000);
@@ -41,10 +48,10 @@ function localTime(unixTs, opts={hour12:true, hourOnly:false}){
 
 /* ========== ALARM ========== */
 function renderAlarm(){
+  setModeClass('alarm');
   app.innerHTML = `
     <div class="center">
       <div class="muted">Alarm Clock (portrait upright)</div>
-
       <div class="row" style="margin-top:12px">
         <button id="enableSoundBtn" class="bigBtn">Enable Alarm Sound</button>
         <label style="display:flex;align-items:center;gap:8px">
@@ -68,13 +75,12 @@ function renderAlarm(){
       <div class="row" style="margin-top:12px">
         <input id="alarmTime" type="time">
         <button id="setAlarmBtn" class="bigBtn">Set</button>
-        <button id="cancelAlarmBtn" class="bigBtn">Cancel</button>
+        <button id="cancelAlarmBtn" class="bigBtn ghost">Cancel</button>
       </div>
 
       <div id="alarmStatus" class="notice">No alarm set</div>
     </div>
   `;
-
   safeQuery('#enableSoundBtn').addEventListener('click', unlockAudio);
   safeQuery('#presetTones').addEventListener('change', e=>{
     const url = e.target.value;
@@ -90,10 +96,8 @@ function renderAlarm(){
       safeQuery('.notice').textContent = 'Custom tone selected';
     }
   });
-
   safeQuery('#setAlarmBtn').addEventListener('click', setAlarmHandler);
   safeQuery('#cancelAlarmBtn').addEventListener('click', cancelAlarmHandler);
-
   stopAlarmBtn.addEventListener('click', stopAlarm);
   snoozeAlarmBtn.addEventListener('click', snoozeAlarm);
 }
@@ -132,11 +136,8 @@ function triggerAlarm(){
   if(isRinging) return; isRinging=true;
   alarmOverlay.classList.remove('hidden'); overlayMsg.textContent = "⏰ Time's up!";
   if(alarmSoundEnabled && alarmAudio.src){
-    alarmAudio.loop = true;
-    alarmAudio.play().catch(()=>{});
-  } else {
-    try{ timerBeep.play().catch(()=>{}); }catch(e){}
-  }
+    alarmAudio.loop = true; alarmAudio.play().catch(()=>{});
+  } else { try{ timerBeep.play().catch(()=>{}); }catch(e){} }
   if(navigator.vibrate) try{ navigator.vibrate([600,200,600]); }catch(e){}
 }
 
@@ -159,6 +160,7 @@ function snoozeAlarm(){
 
 /* ========== STOPWATCH ========== */
 function renderStopwatch(){
+  setModeClass('stopwatch');
   app.innerHTML = `
     <div class="center">
       <div class="muted">Stopwatch (landscape right — hours:mins:secs:ms)</div>
@@ -167,7 +169,7 @@ function renderStopwatch(){
         <button id="swStart" class="bigBtn">Start</button>
         <button id="swStop" class="bigBtn">Stop</button>
         <button id="swLap" class="bigBtn">Lap</button>
-        <button id="swReset" class="bigBtn">Reset</button>
+        <button id="swReset" class="bigBtn ghost">Reset</button>
       </div>
       <div id="laps" class="notice" style="margin-top:12px;text-align:left;max-height:180px;overflow:auto;"></div>
     </div>
@@ -186,17 +188,13 @@ function startStopwatch(){
     const el = safeQuery('#stopwatch'); if(el) el.textContent = formatHMSms(stopwatchTime);
   }, 10);
 }
-
 function stopStopwatch(){ if(stopwatchInterval){ clearInterval(stopwatchInterval); stopwatchInterval=null; } }
-
-function resetStopwatch(){
-  stopStopwatch(); stopwatchTime=0; lapTimes=[]; const el=safeQuery('#stopwatch'); if(el) el.textContent='0:00:00:000'; const l=safeQuery('#laps'); if(l) l.innerHTML='';
-}
-
+function resetStopwatch(){ stopStopwatch(); stopwatchTime=0; lapTimes=[]; const el=safeQuery('#stopwatch'); if(el) el.textContent='0:00:00:000'; const l=safeQuery('#laps'); if(l) l.innerHTML=''; }
 function addLap(){ if(stopwatchTime===0) return; lapTimes.push(stopwatchTime); const l=safeQuery('#laps'); if(l) l.innerHTML = lapTimes.map((t,i)=>`<div>Lap ${i+1}: ${formatHMSms(t)}</div>`).join(''); }
 
 /* ========== TIMER ========== */
 function renderTimer(){
+  setModeClass('timer');
   app.innerHTML = `
     <div class="center">
       <div class="muted">Timer (portrait upside-down)</div>
@@ -209,7 +207,7 @@ function renderTimer(){
       <div class="row" style="margin-top:10px">
         <button id="timerStart" class="bigBtn">Start</button>
         <button id="timerPause" class="bigBtn">Pause</button>
-        <button id="timerReset" class="bigBtn">Reset</button>
+        <button id="timerReset" class="bigBtn ghost">Reset</button>
       </div>
     </div>
   `;
@@ -222,9 +220,7 @@ function renderTimer(){
   safeQuery('#timerPause').addEventListener('click', pauseTimer);
   safeQuery('#timerReset').addEventListener('click', resetTimer);
 }
-
 function updateTimerDisplay(){ const sec=Math.ceil(timerRemaining/1000); const mm=pad(Math.floor(sec/60)); const ss=pad(sec%60); const el=safeQuery('#timerDisplay'); if(el) el.textContent=`${mm}:${ss}`; }
-
 function startTimer(){
   if(timerInterval || timerRemaining<=0) return;
   let last = Date.now();
@@ -245,8 +241,9 @@ function startTimer(){
 function pauseTimer(){ if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } }
 function resetTimer(){ if(timerInterval) clearInterval(timerInterval); timerInterval=null; timerRemaining=0; updateTimerDisplay(); }
 
-/* ========== WEATHER (improved live location + hourly + sunrise/sunset + dynamic bg) ========== */
+/* ========== WEATHER (upgraded) ========== */
 async function renderWeather(){
+  setModeClass('weather');
   app.innerHTML = `
     <div class="center weather-root">
       <div id="weatherHeader" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:6px">
@@ -254,11 +251,8 @@ async function renderWeather(){
         <div id="weatherCurrent" class="notice">Loading…</div>
         <div id="sunTimes" class="notice" style="font-size:0.95rem"></div>
       </div>
-
       <div style="width:100%;margin-top:12px">
-        <div style="display:flex;justify-content:center">
-          <button id="refreshWeather" class="bigBtn">Refresh</button>
-        </div>
+        <div style="display:flex;justify-content:center"><button id="refreshWeather" class="bigBtn">Refresh</button></div>
         <div id="hourlyContainer" style="margin-top:14px"></div>
       </div>
       <div id="weatherMsg" class="notice" style="margin-top:8px"></div>
@@ -268,7 +262,6 @@ async function renderWeather(){
   if(cachedWeather) applyWeatherToUI(cachedWeather);
   else fetchWeather();
 }
-
 async function fetchWeather(){
   const msg = safeQuery('#weatherMsg'); if(!navigator.geolocation){ if(msg) msg.textContent='Geolocation not supported.'; return; }
   if(msg) msg.textContent='Getting location…';
@@ -281,7 +274,7 @@ async function fetchWeather(){
       if(!r.ok) throw new Error('OWM error ' + r.status);
       const data = await r.json();
 
-      // reverse geocode (Nominatim) for friendly place name (best-effort)
+      // reverse geocode for friendly place name
       let place = `${lat.toFixed(2)},${lon.toFixed(2)}`;
       try{
         const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
@@ -293,7 +286,7 @@ async function fetchWeather(){
             place = c ? `${c}${country? ', ' + country: ''}` : (country || place);
           }
         }
-      }catch(e){ /* ignore reverse geocode failure */ }
+      }catch(e){ /* ignore */ }
 
       const weatherObj = {
         lat, lon, place,
@@ -319,7 +312,6 @@ async function fetchWeather(){
     if(msg) msg.textContent = 'Location permission denied or unavailable.';
   }, {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
 }
-
 function applyWeatherToUI(w){
   if(!w) return;
   const locEl = safeQuery('#weatherLocation');
@@ -332,10 +324,11 @@ function applyWeatherToUI(w){
   const iconUrl = cw.icon ? `https://openweathermap.org/img/wn/${cw.icon}@2x.png` : '';
   curEl.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;justify-content:center">
-      ${iconUrl? `<img src="${iconUrl}" alt="${cw.description||''}" style="width:56px;height:56px">` : ''}
+      ${iconUrl? `<img src="${iconUrl}" alt="${cw.description||''}" style="width:56px;height:56px;filter:drop-shadow(0 6px 12px rgba(0,0,0,0.4))">` : ''}
       <div style="text-align:left">
-        <div style="font-weight:600">${Math.round(w.current.temp)}°C</div>
+        <div style="font-weight:700">${Math.round(w.current.temp)}°C</div>
         <div style="font-size:0.95rem">${(cw.main||'')} — ${cw.description||''}</div>
+        <div style="font-size:0.9rem;color:var(--muted);margin-top:6px">Feels like ${Math.round(w.current.feels_like)}° • Humidity ${w.current.humidity||''}% • Wind ${w.current.wind_speed||''} m/s</div>
       </div>
     </div>
   `;
@@ -343,7 +336,6 @@ function applyWeatherToUI(w){
   hourlyContainer.innerHTML = `<div class="hourly-scroll">${w.hourly.map(h=>hourCardHtml(h)).join('')}</div>`;
   applyDynamicBackground(cw);
 }
-
 function hourCardHtml(h){
   const t = localTime(h.dt, {hour12:true, hourOnly:true});
   const icon = h.weather && h.weather[0] && h.weather[0].icon;
@@ -359,8 +351,8 @@ function hourCardHtml(h){
     </div>
   `;
 }
-
 function applyDynamicBackground(weatherObj){
+  // keep body-based weather classes (used for stronger backgrounds)
   document.body.classList.remove('weather-sunny','weather-cloudy','weather-rain','weather-snow','weather-night','weather-mist');
   if(!weatherObj) return;
   const main = (weatherObj.main||'').toLowerCase();
@@ -390,7 +382,6 @@ function mapOrientation(type, angle){
     default: renderAlarm(); break;
   }
 }
-
 function handleOrientationChange(){
   try{
     const so = screen.orientation || screen.mozOrientation || screen.msOrientation;
@@ -399,7 +390,6 @@ function handleOrientationChange(){
     else mapOrientation('portrait-primary',0);
   }catch(e){ mapOrientation('portrait-primary',0); }
 }
-
 if(screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', handleOrientationChange);
 else window.addEventListener('orientationchange', handleOrientationChange);
 handleOrientationChange();
@@ -414,3 +404,8 @@ if(!(screen.orientation && screen.orientation.type)){
     else if(g < -20) mapOrientation('landscape-secondary',270);
   });
 }
+
+/* ========== Demo header quick actions wiring ========== */
+if(demoEnableSound) demoEnableSound.addEventListener('click', ()=>{ unlockAudio(); });
+if(demoRefreshWeather) demoRefreshWeather.addEventListener('click', ()=>{ fetchWeather().catch(()=>{}); });
+
