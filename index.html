@@ -3,29 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>HoldSense — Polished UI</title>
-
-  <!-- Digital font for clocks + UI font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="style.css" />
+  <title>HoldSense — Polished</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="logo">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#g)"></rect>
-          <defs>
-            <linearGradient id="g" x1="0" x2="1">
-              <stop offset="0" stop-color="#06b6d4"/>
-              <stop offset="1" stop-color="#7c3aed"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span class="app-title">HoldSense</span>
-      </div>
-      <div id="orientationLabel" class="muted small">Detecting orientation…</div>
+      <div class="logo"><span class="app-title">HoldSense</span></div>
+      <div id="orientationLabel" class="muted small">Detecting orientation...</div>
     </header>
 
     <main id="app" class="card pane center">
@@ -33,22 +19,16 @@
         <h2>Rotate your phone</h2>
         <p class="muted">Portrait ↑ = Alarm • Landscape → = Stopwatch • Portrait ↓ = Timer • Landscape ← = Weather</p>
         <div class="cta-row">
-          <button id="demoEnableSound" class="bigBtn">Enable Alarm Sound</button>
-          <button id="demoRefreshWeather" class="bigBtn ghost">Refresh Weather</button>
+          <button id="quickEnable" class="bigBtn">Enable Alarm Sound</button>
+          <button id="quickRefresh" class="bigBtn ghost">Refresh Weather</button>
         </div>
       </div>
     </main>
 
-    <footer class="foot muted small">Mobile-first • Works in-browser • Test on phone</footer>
+    <footer class="foot muted small">Mobile-first • Install on device via Add to Home (PWA optional)</footer>
   </div>
 
-  <!-- audio elements -->
-  <audio id="alarmAudio" preload="auto"></audio>
-  <audio id="timerBeep" preload="auto">
-    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
-  </audio>
-
-  <!-- alarm overlay -->
+  <!-- Overlay / audio -->
   <div id="alarmOverlay" class="overlay hidden" role="dialog" aria-modal="true">
     <div class="overlayContent">
       <div class="overlayTitle">⏰ ALARM</div>
@@ -60,6 +40,11 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <audio id="alarmAudio" preload="auto"></audio>
+  <audio id="timerBeep" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+  </audio>
+
+  <script src="script.js" defer></script>
 </body>
 </html>
