@@ -52,3 +52,22 @@ button{
   .bigBtn{min-width:90px}
 }
 ul { padding-left: 18px; color: var(--muted); }
+
+/* Hourly forecast scroll & cards */
+.hourly-scroll { display:flex; gap:10px; overflow-x:auto; padding:8px 6px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
+.hourCard { min-width:96px; background: rgba(255,255,255,0.03); border-radius:10px; padding:8px; text-align:center; box-shadow:0 6px 18px rgba(0,0,0,0.45); scroll-snap-align:start; }
+.hourCard img{ width:48px; height:48px; display:block; margin:auto; }
+.hourTime{ font-size:0.9rem; color:var(--muted); }
+.hourTemp{ font-weight:600; margin-top:6px; }
+.hourPop{ font-size:0.85rem; color:var(--muted); margin-top:4px; }
+
+/* Dynamic backgrounds */
+body.weather-sunny { background: linear-gradient(180deg,#ffefba 0%,#fff1b5 100%); color:#09202b; }
+body.weather-cloudy { background: linear-gradient(180deg,#d7e1ea 0%,#c2cbd4 100%); color:#081019; }
+body.weather-rain { background: linear-gradient(180deg,#4b79a1 0%,#283e51 100%); color:#e6f3fb; }
+body.weather-snow { background: linear-gradient(180deg,#e6f0f8 0%,#cfe6f7 100%); color:#081019; }
+body.weather-night { background: linear-gradient(180deg,#021124 0%,#052238 100%); color:#e6f3fb; }
+body.weather-mist { background: linear-gradient(180deg,#cfd8dc 0%,#b0bec5 100%); color:#081019; }
+
+/* ensure container and card remain readable */
+.container, .card { background: rgba(255,255,255,0.02); }
