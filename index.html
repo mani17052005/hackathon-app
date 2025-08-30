@@ -1,48 +1,55 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HoldSense — Orientation App</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>HoldSense</h1>
-      <div id="orientationLabel" class="muted">Detecting orientation…</div>
-    </header>
+  <header>
+    <h1>HoldSense</h1>
+    <p id="orientationLabel" class="muted">Rotate your phone to use tools</p>
+  </header>
 
-    <main id="app" class="card">
-      <p class="center">Rotate your phone to use features:</p>
-      <ul class="muted">
-        <li>📱 Portrait ↑ — Alarm Clock</li>
-        <li>📱 Landscape → — Stopwatch</li>
-        <li>📱 Portrait ↓ — Timer</li>
-        <li>📱 Landscape ← — Weather</li>
-      </ul>
-    </main>
-
-    <footer class="muted small">Mobile-first • Runs entirely in the browser</footer>
-  </div>
-
-  <!-- alarm audio -->
-  <audio id="alarmAudio" preload="auto"></audio>
-  <audio id="timerBeep" preload="auto">
-    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
-  </audio>
-
-  <!-- fullscreen alarm overlay -->
-  <div id="alarmOverlay" class="overlay hidden" role="dialog" aria-modal="true">
-    <div class="overlayContent">
-      <div class="overlayTitle">⏰ ALARM</div>
-      <div id="overlayMsg" class="overlayMsg">Time's up!</div>
-      <div class="overlayButtons">
-        <button id="stopAlarmBtn" class="bigBtn">Stop</button>
-        <button id="snoozeAlarmBtn" class="bigBtn">Snooze 5m</button>
-      </div>
+  <main>
+    <!-- Alarm -->
+    <div id="alarm" class="tool hidden">
+      <h2>⏰ Alarm Clock</h2>
+      <input type="time" id="alarmTime" />
+      <button onclick="setAlarm()">Set Alarm</button>
+      <p id="alarmStatus" class="muted"></p>
     </div>
-  </div>
+
+    <!-- Stopwatch -->
+    <div id="stopwatch" class="tool hidden">
+      <h2>⏱ Stopwatch</h2>
+      <p id="stopwatchDisplay">00:00:00.000</p>
+      <button onclick="startStopwatch()">Start</button>
+      <button onclick="stopStopwatch()">Stop</button>
+      <button onclick="resetStopwatch()">Reset</button>
+    </div>
+
+    <!-- Timer -->
+    <div id="timer" class="tool hidden">
+      <h2>⏳ Timer</h2>
+      <input type="number" id="timerMinutes" placeholder="Minutes" />
+      <button onclick="startTimer()">Start Timer</button>
+      <p id="timerDisplay">00:00</p>
+    </div>
+
+    <!-- Weather -->
+    <div id="weather" class="tool hidden">
+      <h2>🌤 Weather</h2>
+      <button onclick="getWeather()">Get Weather</button>
+      <p id="weatherResult">--</p>
+    </div>
+  </main>
+
+  <!-- Alarm sound -->
+  <audio id="alarmAudio" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+  </audio>
 
   <script src="script.js"></script>
 </body>
