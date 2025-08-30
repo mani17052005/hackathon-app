@@ -1,10 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>HoldSense — Orientation App</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,76 +14,25 @@
     </header>
 
     <main id="app" class="card">
-      <!-- Alarm Clock (Portrait Upright) -->
-      <div id="alarmClock" class="tool">
-        <h2><i class="fas fa-clock"></i> Alarm Clock</h2>
-        <div class="time-display" id="currentTime">00:00:00</div>
-        <div>
-          <input type="time" id="alarmTime" />
-          <div class="controls">
-            <button id="setAlarmBtn">Set Alarm</button>
-            <button id="clearAlarmBtn">Clear Alarm</button>
-          </div>
-          <div id="alarmStatus" class="muted" style="margin-top: 15px;"></div>
-        </div>
-      </div>
-      
-      <!-- Stopwatch (Landscape Right) -->
-      <div id="stopwatch" class="tool">
-        <h2><i class="fas fa-stopwatch"></i> Stopwatch</h2>
-        <div class="time-display" id="stopwatchDisplay">00:00:00.00</div>
-        <div class="controls">
-          <button id="startStopwatchBtn">Start</button>
-          <button id="lapStopwatchBtn">Lap</button>
-          <button id="resetStopwatchBtn">Reset</button>
-        </div>
-        <div id="lapsContainer" style="margin-top: 20px; max-height: 150px; overflow-y: auto;"></div>
-      </div>
-      
-      <!-- Timer (Portrait Upside Down) -->
-      <div id="timer" class="tool">
-        <h2><i class="fas fa-hourglass-half"></i> Timer</h2>
-        <div class="time-display" id="timerDisplay">25:00</div>
-        <div>
-          <input type="number" id="minutesInput" placeholder="Minutes" min="0" max="60" value="25" />
-          <div class="controls">
-            <button id="startTimerBtn">Start</button>
-            <button id="pauseTimerBtn">Pause</button>
-            <button id="resetTimerBtn">Reset</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Weather (Landscape Left) -->
-      <div id="weather" class="tool">
-        <h2><i class="fas fa-cloud-sun"></i> Weather</h2>
-        <div class="weather-display">
-          <div class="weather-icon"><i class="fas fa-sun"></i></div>
-          <div class="temperature">--°C</div>
-          <div class="weather-desc">Loading weather...</div>
-          <div class="location">--</div>
-        </div>
-        <div class="controls">
-          <button id="refreshWeatherBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-        </div>
-      </div>
-      
-      <!-- Initial instructions -->
-      <div id="instructions">
-        <p class="center">Rotate your phone to use features:</p>
-        <ul class="muted">
-          <li>Portrait ↑ — Alarm Clock</li>
-          <li>Landscape → — Stopwatch</li>
-          <li>Portrait ↓ — Timer</li>
-          <li>Landscape ← — Weather</li>
-        </ul>
-      </div>
+      <p class="center">Rotate your phone to use features:</p>
+      <ul class="muted">
+        <li>📱 Portrait ↑ — Alarm Clock</li>
+        <li>📱 Landscape → — Stopwatch</li>
+        <li>📱 Portrait ↓ — Timer</li>
+        <li>📱 Landscape ← — Weather</li>
+      </ul>
     </main>
 
     <footer class="muted small">Mobile-first • Runs entirely in the browser</footer>
   </div>
 
-  <!-- Fullscreen alarm overlay -->
+  <!-- alarm audio -->
+  <audio id="alarmAudio" preload="auto"></audio>
+  <audio id="timerBeep" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+  </audio>
+
+  <!-- fullscreen alarm overlay -->
   <div id="alarmOverlay" class="overlay hidden" role="dialog" aria-modal="true">
     <div class="overlayContent">
       <div class="overlayTitle">⏰ ALARM</div>
