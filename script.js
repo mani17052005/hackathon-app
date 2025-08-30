@@ -1,311 +1,155 @@
-// DOM Elements
-const orientationLabel = document.getElementById('orientationLabel');
-const app = document.getElementById('app');
-const instructions = document.getElementById('instructions');
-const alarmOverlay = document.getElementById('alarmOverlay');
-const overlayMsg = document.getElementById('overlayMsg');
+/* HoldSense - Orientation Based App */
 
-// Tool containers
-const alarmClock = document.getElementById('alarmClock');
-const stopwatch = document.getElementById('stopwatch');
-const timer = document.getElementById('timer');
-const weather = document.getElementById('weather');
+function switchTool(tool) {
+  const app = document.getElementById("app");
+  const label = document.getElementById("orientationLabel");
 
-// Check if device supports orientation events
-if (window.DeviceOrientationEvent) {
-  window.addEventListener('deviceorientation', handleOrientation);
-} else {
-  orientationLabel.textContent = 'Device orientation not supported on this device.';
-}
-
-// Handle device orientation
-function handleOrientation(event) {
-  const beta = event.beta;  // Front-to-back (portrait upright/upside down)
-  const gamma = event.gamma; // Left-to-right (landscape)
-  
-  // Determine orientation based on beta and gamma values
-  if (Math.abs(beta) < 45) {
-    if (gamma > 30) {
-      // Landscape right (stopwatch)
-      showTool('stopwatch');
-      orientationLabel.textContent = 'Landscape Mode (Right-Side Up) - Stopwatch';
-    } else if (gamma < -30) {
-      // Landscape left (weather)
-      showTool('weather');
-      orientationLabel.textContent = 'Landscape Mode (Left-Side Up) - Weather';
-    }
-  } else {
-    if (beta > 45) {
-      // Portrait upside down (timer)
-      showTool('timer');
-      orientationLabel.textContent = 'Portrait Mode (Upside Down) - Timer';
-    } else {
-      // Portrait upright (alarm clock)
-      showTool('alarm');
-      orientationLabel.textContent = 'Portrait Mode (Upright) - Alarm Clock';
-    }
+  if (tool === "alarm") {
+    label.textContent = "Portrait ↑ — Alarm Clock";
+    app.innerHTML = `
+      <h2>⏰ Alarm Clock</h2>
+      <input type="time" id="alarmTime">
+      <button onclick="setAlarm()">Set Alarm</button>
+      <div id="alarmStatus"></div>`;
+  }
+  else if (tool === "stopwatch") {
+    label.textContent = "Landscape → — Stopwatch";
+    app.innerHTML = `
+      <h2>⏱ Stopwatch</h2>
+      <div id="stopwatch">00:00:00.000</div>
+      <button onclick="startStopwatch()">Start</button>
+      <button onclick="stopStopwatch()">Stop</button>
+      <button onclick="resetStopwatch()">Reset</button>`;
+  }
+  else if (tool === "timer") {
+    label.textContent = "Portrait ↓ — Timer";
+    app.innerHTML = `
+      <h2>⏳ Timer</h2>
+      <input type="number" id="timerInput" placeholder="Seconds">
+      <button onclick="startTimer()">Start</button>
+      <div id="timerDisplay">0</div>`;
+  }
+  else if (tool === "weather") {
+    label.textContent = "Landscape ← — Weather";
+    app.innerHTML = `
+      <h2>☀️ Weather</h2>
+      <div id="weatherResult">Loading...</div>`;
+    getWeather();
   }
 }
 
-// Show the appropriate tool based on orientation
-function showTool(tool) {
-  // Hide instructions
-  instructions.classList.add('hidden');
-  
-  // Hide all tools
-  alarmClock.classList.remove('active-tool');
-  stopwatch.classList.remove('active-tool');
-  timer.classList.remove('active-tool');
-  weather.classList.remove('active-tool');
-  
-  // Show the selected tool
-  switch(tool) {
-    case 'alarm':
-      alarmClock.classList.add('active-tool');
-      break;
-    case 'stopwatch':
-      stopwatch.classList.add('active-tool');
-      break;
-    case 'timer':
-      timer.classList.add('active-tool');
-      break;
-    case 'weather':
-      weather.classList.add('active-tool');
-      // Fetch weather when this view is shown
-      getWeather();
-      break;
-  }
-}
+/* === Alarm Clock === */
+let alarmTimeout;
+function setAlarm() {
+  const time = document.getElementById("alarmTime").value;
+  document.getElementById("alarmStatus").textContent = "Alarm set for " + time;
+  if (alarmTimeout) clearTimeout(alarmTimeout);
 
-// Alarm Clock functionality
-const currentTimeElement = document.getElementById('currentTime');
-const alarmTimeInput = document.getElementById('alarmTime');
-const setAlarmBtn = document.getElementById('setAlarmBtn');
-const clearAlarmBtn = document.getElementById('clearAlarmBtn');
-const alarmStatus = document.getElementById('alarmStatus');
-const stopAlarmBtn = document.getElementById('stopAlarmBtn');
-const snoozeAlarmBtn = document.getElementById('snoozeAlarmBtn');
-
-let alarmTime = null;
-let alarmInterval = null;
-
-function updateClock() {
+  const [h, m] = time.split(":").map(Number);
   const now = new Date();
-  const timeString = now.toLocaleTimeString();
-  currentTimeElement.textContent = timeString;
-  
-  // Check if alarm should go off
-  if (alarmTime) {
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    if (currentTime === alarmTime) {
-      triggerAlarm();
-    }
-  }
-}
+  let alarm = new Date();
+  alarm.setHours(h, m, 0, 0);
+  if (alarm < now) alarm.setDate(alarm.getDate() + 1);
 
-setAlarmBtn.addEventListener('click', () => {
-  if (alarmTimeInput.value) {
-    const [hours, minutes] = alarmTimeInput.value.split(':');
-    alarmTime = parseInt(hours) * 60 + parseInt(minutes);
-    alarmStatus.textContent = `Alarm set for ${formatTime(hours, minutes)}`;
-  }
-});
-
-clearAlarmBtn.addEventListener('click', () => {
-  alarmTime = null;
-  alarmStatus.textContent = '';
-  alarmTimeInput.value = '';
-});
-
-function formatTime(hours, minutes) {
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const formattedHours = hours % 12 || 12;
-  return `${formattedHours}:${minutes} ${period}`;
+  const diff = alarm - now;
+  alarmTimeout = setTimeout(triggerAlarm, diff);
 }
 
 function triggerAlarm() {
-  alarmStatus.textContent = 'ALARM! WAKE UP!';
-  alarmOverlay.classList.remove('hidden');
-  document.body.classList.add('vibrate');
-  alarmTime = null;
-  alarmTimeInput.value = '';
+  const overlay = document.getElementById("alarmOverlay");
+  overlay.classList.remove("hidden");
+  const audio = document.getElementById("alarmAudio");
+  audio.src = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg";
+  audio.loop = true;
+  audio.play();
+}
+document.getElementById("stopAlarmBtn").onclick = () => {
+  document.getElementById("alarmOverlay").classList.add("hidden");
+  const audio = document.getElementById("alarmAudio");
+  audio.pause();
+  audio.currentTime = 0;
+};
+document.getElementById("snoozeAlarmBtn").onclick = () => {
+  document.getElementById("alarmOverlay").classList.add("hidden");
+  const audio = document.getElementById("alarmAudio");
+  audio.pause();
+  audio.currentTime = 0;
+  setTimeout(triggerAlarm, 5 * 60 * 1000);
+};
+
+/* === Stopwatch === */
+let swInterval, swStartTime, swElapsed = 0;
+function startStopwatch() {
+  if (swInterval) return;
+  swStartTime = Date.now() - swElapsed;
+  swInterval = setInterval(() => {
+    swElapsed = Date.now() - swStartTime;
+    const ms = swElapsed % 1000;
+    const s = Math.floor(swElapsed / 1000) % 60;
+    const m = Math.floor(swElapsed / 60000) % 60;
+    const h = Math.floor(swElapsed / 3600000);
+    document.getElementById("stopwatch").textContent =
+      `${h.toString().padStart(2,"0")}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}.${ms.toString().padStart(3,"0")}`;
+  }, 50);
+}
+function stopStopwatch() {
+  clearInterval(swInterval);
+  swInterval = null;
+}
+function resetStopwatch() {
+  stopStopwatch();
+  swElapsed = 0;
+  document.getElementById("stopwatch").textContent = "00:00:00.000";
 }
 
-stopAlarmBtn.addEventListener('click', () => {
-  alarmOverlay.classList.add('hidden');
-  document.body.classList.remove('vibrate');
-});
-
-snoozeAlarmBtn.addEventListener('click', () => {
-  const now = new Date();
-  const snoozeTime = new Date(now.getTime() + 5 * 60000); // 5 minutes from now
-  alarmTime = snoozeTime.getHours() * 60 + snoozeTime.getMinutes();
-  alarmStatus.textContent = `Snoozed until ${formatTime(snoozeTime.getHours(), snoozeTime.getMinutes())}`;
-  alarmOverlay.classList.add('hidden');
-  document.body.classList.remove('vibrate');
-});
-
-// Update clock every second
-setInterval(updateClock, 1000);
-updateClock();
-
-// Stopwatch functionality
-const stopwatchDisplay = document.getElementById('stopwatchDisplay');
-const startStopwatchBtn = document.getElementById('startStopwatchBtn');
-const lapStopwatchBtn = document.getElementById('lapStopwatchBtn');
-const resetStopwatchBtn = document.getElementById('resetStopwatchBtn');
-const lapsContainer = document.getElementById('lapsContainer');
-
-let stopwatchInterval = null;
-let stopwatchRunning = false;
-let stopwatchTime = 0;
-let lapCount = 1;
-
-function updateStopwatch() {
-  stopwatchTime += 10; // Update every 10ms for precision
-  
-  const milliseconds = Math.floor((stopwatchTime % 1000) / 10);
-  const seconds = Math.floor((stopwatchTime / 1000) % 60);
-  const minutes = Math.floor((stopwatchTime / (1000 * 60)) % 60);
-  const hours = Math.floor(stopwatchTime / (1000 * 60 * 60));
-  
-  stopwatchDisplay.textContent = `${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}.${padZero(milliseconds, 2)}`;
-}
-
-startStopwatchBtn.addEventListener('click', () => {
-  if (stopwatchRunning) {
-    // Pause stopwatch
-    clearInterval(stopwatchInterval);
-    startStopwatchBtn.textContent = 'Resume';
-  } else {
-    // Start stopwatch
-    stopwatchInterval = setInterval(updateStopwatch, 10);
-    startStopwatchBtn.textContent = 'Pause';
-  }
-  stopwatchRunning = !stopwatchRunning;
-});
-
-lapStopwatchBtn.addEventListener('click', () => {
-  if (stopwatchRunning) {
-    const lapTime = document.createElement('div');
-    lapTime.textContent = `Lap ${lapCount++}: ${stopwatchDisplay.textContent}`;
-    lapsContainer.prepend(lapTime);
-  }
-});
-
-resetStopwatchBtn.addEventListener('click', () => {
-  clearInterval(stopwatchInterval);
-  stopwatchTime = 0;
-  stopwatchDisplay.textContent = '00:00:00.00';
-  startStopwatchBtn.textContent = 'Start';
-  stopwatchRunning = false;
-  lapCount = 1;
-  lapsContainer.innerHTML = '';
-});
-
-// Timer functionality
-const timerDisplay = document.getElementById('timerDisplay');
-const minutesInput = document.getElementById('minutesInput');
-const startTimerBtn = document.getElementById('startTimerBtn');
-const pauseTimerBtn = document.getElementById('pauseTimerBtn');
-const resetTimerBtn = document.getElementById('resetTimerBtn');
-
-let timerInterval = null;
-let timerRunning = false;
-let timerTime = 25 * 60; // 25 minutes in seconds
-let timerOriginalTime = timerTime;
-
-function updateTimerDisplay() {
-  const minutes = Math.floor(timerTime / 60);
-  const seconds = timerTime % 60;
-  timerDisplay.textContent = `${padZero(minutes)}:${padZero(seconds)}`;
-}
-
-function updateTimer() {
-  if (timerTime > 0) {
-    timerTime--;
-    updateTimerDisplay();
-  } else {
-    clearInterval(timerInterval);
-    timerRunning = false;
-    overlayMsg.textContent = "Timer completed!";
-    alarmOverlay.classList.remove('hidden');
-    document.body.classList.add('vibrate');
-  }
-}
-
-startTimerBtn.addEventListener('click', () => {
-  if (!timerRunning) {
-    if (timerTime === 0) {
-      const minutes = parseInt(minutesInput.value) || 25;
-      timerTime = minutes * 60;
-      timerOriginalTime = timerTime;
+/* === Timer === */
+let timerInterval;
+function startTimer() {
+  let secs = parseInt(document.getElementById("timerInput").value);
+  const display = document.getElementById("timerDisplay");
+  clearInterval(timerInterval);
+  display.textContent = secs;
+  timerInterval = setInterval(() => {
+    secs--;
+    display.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById("timerBeep").play();
+      alert("Timer finished!");
     }
-    
-    timerInterval = setInterval(updateTimer, 1000);
-    timerRunning = true;
-    startTimerBtn.textContent = 'Resume';
-  }
-});
+  }, 1000);
+}
 
-pauseTimerBtn.addEventListener('click', () => {
-  clearInterval(timerInterval);
-  timerRunning = false;
-  startTimerBtn.textContent = 'Start';
-});
-
-resetTimerBtn.addEventListener('click', () => {
-  clearInterval(timerInterval);
-  timerTime = timerOriginalTime;
-  updateTimerDisplay();
-  timerRunning = false;
-  startTimerBtn.textContent = 'Start';
-});
-
-// Initialize timer display
-updateTimerDisplay();
-
-// Weather functionality
-const weatherIcon = document.querySelector('.weather-icon i');
-const temperatureElement = document.querySelector('.temperature');
-const weatherDescElement = document.querySelector('.weather-desc');
-const locationElement = document.querySelector('.location');
-const refreshWeatherBtn = document.getElementById('refreshWeatherBtn');
-
-refreshWeatherBtn.addEventListener('click', getWeather);
-
+/* === Weather === */
 function getWeather() {
-  // Using OpenWeatherMap API (free tier)
-  // Note: In a real application, you would use your own API key
-  // This is a simulated response as we don't have an actual API key for this demo
-  
-  // Simulate API call with random data
-  const weatherConditions = [
-    { type: 'Sunny', icon: 'fa-sun', temp: 25 },
-    { type: 'Cloudy', icon: 'fa-cloud', temp: 18 },
-    { type: 'Rainy', icon: 'fa-cloud-rain', temp: 12 },
-    { type: 'Snowy', icon: 'fa-snowflake', temp: -2 }
-  ];
-  
-  const randomCondition = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
-  
-  // Update weather display
-  temperatureElement.textContent = `${randomCondition.temp}°C`;
-  weatherDescElement.textContent = randomCondition.type;
-  locationElement.textContent = 'Current Location';
-  weatherIcon.className = `fas ${randomCondition.icon}`;
+  const result = document.getElementById("weatherResult");
+  if (!navigator.geolocation) {
+    result.textContent = "Geolocation not supported.";
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`)
+      .then(r => r.json())
+      .then(data => {
+        const w = data.current_weather;
+        result.textContent = `Temperature: ${w.temperature}°C, Windspeed: ${w.windspeed} km/h`;
+      })
+      .catch(() => result.textContent = "Weather fetch error.");
+  });
 }
 
-// Utility function to pad numbers with zero
-function padZero(num, length = 2) {
-  return num.toString().padStart(length, '0');
+/* === Orientation Auto-Switch === */
+function handleOrientation() {
+  let angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  if (angle === 0) switchTool("alarm");           // Portrait ↑
+  else if (angle === 180) switchTool("timer");    // Portrait ↓
+  else if (angle === 90) switchTool("stopwatch"); // Landscape →
+  else if (angle === -90 || angle === 270) switchTool("weather"); // Landscape ←
 }
-
-// Initial tool display based on window orientation
-if (window.innerHeight > window.innerWidth) {
-  showTool('alarm');
-  orientationLabel.textContent = 'Portrait Mode (Upright) - Alarm Clock';
+if (screen.orientation && screen.orientation.addEventListener) {
+  screen.orientation.addEventListener("change", handleOrientation);
 } else {
-  showTool('stopwatch');
-  orientationLabel.textContent = 'Landscape Mode (Right-Side Up) - Stopwatch';
+  window.addEventListener("orientationchange", handleOrientation);
 }
+handleOrientation();
