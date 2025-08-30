@@ -1,57 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Smart Tools</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <h1>📱 Smart Tools App</h1>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand" aria-label="Smart Tools"></div>
+      <div id="statusText" class="muted"></div>
+      <button id="themeToggle" class="iconBtn" aria-label="Toggle Theme">🌓</button>
+    </header>
 
-  <!-- Alarm -->
-  <div id="alarm" class="tool hidden">
-    <h2>⏰ Alarm</h2>
-    <input type="time" id="alarmTime">
-    <input type="file" id="alarmMusic" accept="audio/*">
-    <button onclick="setAlarm()">Set Alarm</button>
-    <p id="alarmStatus">No alarm set</p>
-    <audio id="alarmAudio"></audio>
+    <main class="stage">
+      <!-- Alarm -->
+      <section id="view-alarm" class="view" role="region" aria-label="Alarm">
+        <div class="card glass">
+          <div class="panelHeader">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          </div>
+
+          <div class="clockNow" id="clockNow">--:--</div>
+
+          <div class="row center">
+            <input id="alarmTime" type="time" class="input-lg" aria-label="Pick alarm time">
+            <button id="addAlarmBtn" class="btn primary" aria-label="Add alarm">＋</button>
+            <label class="btn fileBtn" aria-label="Choose custom alarm sound">
+              🎵
+              <input id="alarmFile" type="file" accept="audio/*" hidden>
+            </label>
+            <button id="enableSoundBtn" class="btn" aria-label="Enable sound">🔊</button>
+          </div>
+
+          <div class="chips" id="toneChips" aria-label="Built-in tones">
+            <button class="chip" data-src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">Classic</button>
+            <button class="chip" data-src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg">Digital</button>
+            <button class="chip" data-src="https://actions.google.com/sounds/v1/alarms/slow_silent_clock.ogg">Chime</button>
+          </div>
+
+          <div id="alarmsList" class="list"></div>
+        </div>
+      </section>
+
+      <!-- Stopwatch -->
+      <section id="view-stopwatch" class="view" role="region" aria-label="Stopwatch">
+        <div class="card glass">
+          <div class="panelHeader">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          </div>
+
+          <div class="bigDisplay" id="swDisplay">00:00:00.000</div>
+
+          <div class="row center">
+            <button id="swStart" class="btn primary">▶</button>
+            <button id="swPause" class="btn">⏸</button>
+            <button id="swReset" class="btn">↺</button>
+            <button id="swLap" class="btn">🏁</button>
+            <button id="swExport" class="btn">⬇</button>
+          </div>
+
+          <div class="progressWrap">
+            <svg viewBox="0 0 120 120" class="ring">
+              <circle cx="60" cy="60" r="54" class="ring-bg"></circle>
+              <circle cx="60" cy="60" r="54" class="ring-fg" id="swRing"></circle>
+            </svg>
+          </div>
+
+          <div id="swLaps" class="list smallList"></div>
+        </div>
+      </section>
+
+      <!-- Timer -->
+      <section id="view-timer" class="view" role="region" aria-label="Timer">
+        <div class="card glass">
+          <div class="panelHeader">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          </div>
+
+          <div class="row center">
+            <input id="tmMin" type="number" min="0" placeholder="min" class="input-md">
+            <input id="tmSec" type="number" min="0" max="59" placeholder="sec" class="input-md">
+            <button id="tmAdd" class="btn primary">＋</button>
+          </div>
+
+          <div id="timersList" class="gridTimers"></div>
+        </div>
+      </section>
+
+      <!-- Weather -->
+      <section id="view-weather" class="view" role="region" aria-label="Weather">
+        <div class="card glass">
+          <div class="panelHeader">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          </div>
+
+          <div class="weatherWrap">
+            <div class="weatherIcon" id="wIcon">☁️</div>
+            <div class="bigDisplay" id="wTemp">--°C</div>
+            <div class="muted" id="wPlace">Locating…</div>
+            <div class="row center">
+              <div class="pill" id="wExtra">—</div>
+              <button id="wRefresh" class="btn">↻</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- overlay for alarm ringing -->
+    <div id="alarmOverlay" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="overlayCard">
+        <div class="overlayTitle">⏰</div>
+        <div id="overlayMsg" class="overlayMsg">Time's up!</div>
+        <div class="row center">
+          <button id="ovStop" class="btn danger">Stop</button>
+          <button id="ovSnooze" class="btn primary">Snooze 5m</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom navigation (icons only; accessible labels) -->
+    <nav class="dock">
+      <button class="tabBtn active" data-view="alarm" aria-label="Alarm">⏰</button>
+      <button class="tabBtn" data-view="stopwatch" aria-label="Stopwatch">⏱️</button>
+      <button class="tabBtn" data-view="timer" aria-label="Timer">⏳</button>
+      <button class="tabBtn" data-view="weather" aria-label="Weather">☁️</button>
+    </nav>
   </div>
 
-  <!-- Stopwatch -->
-  <div id="stopwatch" class="tool hidden">
-    <h2>⏱ Stopwatch</h2>
-    <p id="swDisplay">00:00:00</p>
-    <button onclick="startStopwatch()">Start</button>
-    <button onclick="stopStopwatch()">Stop</button>
-    <button onclick="resetStopwatch()">Reset</button>
-    <button onclick="lapStopwatch()">Lap</button>
-    <ul id="laps"></ul>
-  </div>
-
-  <!-- Timer -->
-  <div id="timer" class="tool hidden">
-    <h2>⏳ Timer</h2>
-    <input type="number" id="timerMinutes" placeholder="Minutes">
-    <button onclick="startTimer()">Start</button>
-    <p id="timerDisplay">00:00</p>
-  </div>
-
-  <!-- Weather -->
-  <div id="weather" class="tool hidden">
-    <h2>🌤 Weather</h2>
-    <button onclick="getWeather()">Get Current Weather</button>
-    <pre id="weatherResult">Waiting...</pre>
-  </div>
-
-  <!-- Bottom Nav -->
-  <nav>
-    <button onclick="switchTool('alarm')">Alarm</button>
-    <button onclick="switchTool('stopwatch')">Stopwatch</button>
-    <button onclick="switchTool('timer')">Timer</button>
-    <button onclick="switchTool('weather')">Weather</button>
-  </nav>
+  <!-- Audio -->
+  <audio id="alarmAudio" preload="auto"></audio>
+  <audio id="beep" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+  </audio>
 
   <script src="script.js"></script>
 </body>
