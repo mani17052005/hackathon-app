@@ -1,133 +1,129 @@
-// ========== Tool Switching ==========
-function switchTool(tool) {
-  document.querySelectorAll('.tool').forEach(el => el.classList.add('hidden'));
-  document.getElementById(tool).classList.remove('hidden');
+// ===== Utility: Show section with animation =====
+function showTool(id) {
+  document.querySelectorAll(".tool").forEach(t => {
+    t.classList.remove("active");
+    setTimeout(() => { t.style.display = "none"; }, 600); // wait for fade out
+  });
+
+  const tool = document.getElementById(id);
+  tool.style.display = "block";
+  setTimeout(() => tool.classList.add("active"), 20); // trigger fade-in
 }
 
-// Orientation-based switching
-function handleOrientation() {
-  let angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-
-  if (angle === 0) {
-    switchTool('alarm');
-  } else if (angle === 180) {
-    switchTool('timer');
-  } else if (angle === 90) {
-    switchTool('stopwatch');
-  } else if (angle === -90 || angle === 270) {
-    switchTool('weather');
-  }
-}
-
-if (screen.orientation && screen.orientation.addEventListener) {
-  screen.orientation.addEventListener("change", handleOrientation);
-} else {
-  window.addEventListener("orientationchange", handleOrientation);
-}
-handleOrientation();
-
-
-// ========== Alarm ==========
-let alarmTimeout;
+// ===== ALARM =====
+let alarmTimeout, alarmSound;
 
 function setAlarm() {
-  const time = document.getElementById("alarmTime").value;
-  const musicFile = document.getElementById("alarmMusic").files[0];
-  const audio = document.getElementById("alarmAudio");
+  const alarmTime = document.getElementById("alarmTime").value;
+  const alarmFile = document.getElementById("alarmTone").files[0];
 
-  if (!time) {
-    alert("Please set a time for alarm!");
-    return;
-  }
-  if (!musicFile) {
-    alert("Please select your favorite music!");
+  if (!alarmTime) {
+    alert("Please select a time!");
     return;
   }
 
-  audio.src = URL.createObjectURL(musicFile);
+  const alarmDate = new Date();
+  const [hours, minutes] = alarmTime.split(":");
+  alarmDate.setHours(hours, minutes, 0, 0);
 
   const now = new Date();
-  const alarmTime = new Date(now.toDateString() + " " + time);
+  const timeToAlarm = alarmDate - now;
 
-  if (alarmTime < now) {
-    alarmTime.setDate(alarmTime.getDate() + 1); // Next day
+  if (timeToAlarm < 0) {
+    alert("Selected time has already passed today.");
+    return;
   }
 
-  const timeout = alarmTime - now;
-  document.getElementById("alarmStatus").textContent = `Alarm set for ${alarmTime}`;
-
-  if (alarmTimeout) clearTimeout(alarmTimeout);
+  alarmSound = alarmFile ? new Audio(URL.createObjectURL(alarmFile)) : new Audio();
+  document.getElementById("alarmStatus").textContent = "Alarm set!";
 
   alarmTimeout = setTimeout(() => {
-    audio.play();
-    alert("⏰ Wake up! Alarm ringing!");
-  }, timeout);
+    document.getElementById("alarmStatus").textContent = "⏰ Alarm Ringing!";
+    if (alarmSound) alarmSound.play();
+  }, timeToAlarm);
 }
 
-
-// ========== Stopwatch ==========
-let swInterval, swTime = 0;
+// ===== STOPWATCH =====
+let stopwatchInterval, swSeconds = 0, running = false;
 
 function updateStopwatch() {
-  let hrs = Math.floor(swTime / 3600);
-  let mins = Math.floor((swTime % 3600) / 60);
-  let secs = swTime % 60;
-  document.getElementById("swDisplay").textContent =
-    `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  let hrs = String(Math.floor(swSeconds / 3600)).padStart(2, '0');
+  let mins = String(Math.floor((swSeconds % 3600) / 60)).padStart(2, '0');
+  let secs = String(swSeconds % 60).padStart(2, '0');
+  document.getElementById("stopwatchDisplay").textContent = `${hrs}:${mins}:${secs}`;
 }
 
 function startStopwatch() {
-  if (swInterval) return;
-  swInterval = setInterval(() => {
-    swTime++;
-    updateStopwatch();
-  }, 1000);
+  if (!running) {
+    running = true;
+    stopwatchInterval = setInterval(() => {
+      swSeconds++;
+      updateStopwatch();
+    }, 1000);
+  } else {
+    clearInterval(stopwatchInterval);
+    running = false;
+  }
 }
 
-function stopStopwatch() {
-  clearInterval(swInterval);
-  swInterval = null;
+function lapStopwatch() {
+  if (running) {
+    const lap = document.createElement("li");
+    lap.textContent = document.getElementById("stopwatchDisplay").textContent;
+    document.getElementById("laps").appendChild(lap);
+  }
 }
 
 function resetStopwatch() {
-  stopStopwatch();
-  swTime = 0;
+  clearInterval(stopwatchInterval);
+  running = false;
+  swSeconds = 0;
   updateStopwatch();
   document.getElementById("laps").innerHTML = "";
 }
 
-function lapStopwatch() {
-  const li = document.createElement("li");
-  li.textContent = document.getElementById("swDisplay").textContent;
-  document.getElementById("laps").appendChild(li);
-}
-
-
-// ========== Timer ==========
-let timerInterval;
+// ===== TIMER =====
+let timerInterval, timerRemaining = 0;
 
 function startTimer() {
-  let minutes = parseInt(document.getElementById("timerMinutes").value) || 0;
-  let seconds = minutes * 60;
+  if (timerInterval) return;
+  const input = parseInt(document.getElementById("timerInput").value);
+  if (!input) return;
 
-  clearInterval(timerInterval);
+  timerRemaining = input;
+  updateTimerDisplay();
+
   timerInterval = setInterval(() => {
-    if (seconds <= 0) {
+    timerRemaining--;
+    updateTimerDisplay();
+    if (timerRemaining <= 0) {
       clearInterval(timerInterval);
-      alert("⏳ Timer finished!");
-      return;
+      timerInterval = null;
+      alert("⏳ Timer Finished!");
     }
-    seconds--;
-    let m = Math.floor(seconds / 60);
-    let s = seconds % 60;
-    document.getElementById("timerDisplay").textContent =
-      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }, 1000);
 }
 
+function pauseTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
 
-// ========== Weather ==========
-function getWeather() {
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerRemaining = 0;
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+  let mins = String(Math.floor(timerRemaining / 60)).padStart(2, '0');
+  let secs = String(timerRemaining % 60).padStart(2, '0');
+  document.getElementById("timerDisplay").textContent = `${mins}:${secs}`;
+}
+
+// ===== WEATHER =====
+async function getWeather() {
   if (!navigator.geolocation) {
     document.getElementById("weatherResult").textContent = "Geolocation not supported.";
     return;
@@ -141,12 +137,30 @@ function getWeather() {
         headers: { "User-Agent": "SmartToolsApp/1.0 github.com/yourusername" }
       });
       const data = await response.json();
-      const temp = data.properties.timeseries[0].data.instant.details.air_temperature;
-
+      const details = data.properties.timeseries[0].data.instant.details;
       document.getElementById("weatherResult").textContent =
-        `📍 Lat: ${latitude.toFixed(2)}, Lon: ${longitude.toFixed(2)}\n🌡️ Temp: ${temp} °C`;
+        `🌡 Temp: ${details.air_temperature}°C\n💧 Humidity: ${details.relative_humidity}%\n💨 Wind: ${details.wind_speed} m/s`;
     } catch (err) {
       document.getElementById("weatherResult").textContent = "Failed to fetch weather.";
     }
   });
 }
+
+// ===== ORIENTATION SWITCHING =====
+function handleOrientation() {
+  const angle = window.screen.orientation.angle;
+  const type = window.screen.orientation.type;
+
+  if (type.includes("portrait") && angle === 0) {
+    showTool("alarm");
+  } else if (type.includes("landscape") && angle === 90) {
+    showTool("stopwatch");
+  } else if (type.includes("portrait") && angle === 180) {
+    showTool("timer");
+  } else if (type.includes("landscape") && angle === 270) {
+    showTool("weather");
+  }
+}
+
+window.addEventListener("orientationchange", handleOrientation);
+window.addEventListener("load", handleOrientation);
