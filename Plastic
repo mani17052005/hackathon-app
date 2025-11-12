@@ -1,0 +1,178 @@
+# plastic_detection.py
+# Robust Mask R-CNN demo for image + webcam (improved responsiveness and stability)
+# Save this file and run it from a normal terminal:
+# python plastic_detection.py
+
+import os
+import cv2
+import torch
+from torchvision import models, transforms
+import numpy as np
+import time
+
+# -------------------- Config --------------------
+PROCESS_EVERY_N_FRAMES = 2   # set to 1 to process every frame (slower), 2 or 3 -> faster
+SCORE_THRESHOLD = 0.75       # detection confidence threshold
+QUIT_KEY = ord('p')          # press 'p' in the video window to quit
+WINDOW_NAME = "Plastic Detection - Webcam"
+# ------------------------------------------------
+
+# COCO class names (same order as torchvision pretrained models)
+COCO_INSTANCE_CATEGORY_NAMES = [
+    '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+    'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A', 'stop sign',
+    'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+    'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack', 'umbrella',
+    'N/A', 'N/A', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard',
+    'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard',
+    'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife',
+    'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli',
+    'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant',
+    'bed', 'N/A', 'dining table', 'N/A', 'N/A', 'toilet', 'N/A', 'tv', 'laptop',
+    'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
+    'sink', 'refrigerator', 'N/A', 'book', 'clock', 'vase', 'scissors',
+    'teddy bear', 'hair drier', 'toothbrush'
+]
+
+# We will focus on categories that are likely to be plastic items (example)
+PLASTIC_LIKE_CLASSES = {'bottle', 'cup'}  # extend if needed
+
+# -------------------- Device --------------------
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+print(f"Using device: {device}")
+
+# -------------------- Model Load --------------------
+print("Loading Mask R-CNN model (pretrained on COCO)... (this may take a moment)")
+try:
+    # torchvision >= 0.13 uses weights=...; if older, change accordingly
+    model = models.detection.maskrcnn_resnet50_fpn(weights="DEFAULT")
+except Exception:
+    # fallback for older torchvision versions
+    model = models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+model.to(device)
+model.eval()
+print("Model loaded.")
+
+# -------------------- Transform --------------------
+def prepare_tensor_from_bgr(frame_bgr):
+    # Convert BGR (OpenCV) -> RGB and to tensor
+    frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    tensor = transforms.ToTensor()(frame_rgb).to(device)
+    return tensor
+
+# -------------------- Detection --------------------
+def detect_and_draw(frame_bgr):
+    """
+    Runs inference and draws boxes for detections above SCORE_THRESHOLD.
+    Returns annotated BGR frame and detected count of plastic-like items.
+    """
+    h0, w0 = frame_bgr.shape[:2]
+    tensor = prepare_tensor_from_bgr(frame_bgr)
+    with torch.no_grad():
+        outputs = model([tensor])
+
+    outputs = outputs[0]
+    boxes = outputs.get('boxes', torch.empty((0,4))).cpu().numpy()
+    scores = outputs.get('scores', torch.empty((0,))).cpu().numpy()
+    labels = outputs.get('labels', torch.empty((0,))).cpu().numpy()
+
+    count_plastic = 0
+    for box, score, label in zip(boxes, scores, labels):
+        if score < SCORE_THRESHOLD:
+            continue
+        class_name = COCO_INSTANCE_CATEGORY_NAMES[int(label)] if int(label) < len(COCO_INSTANCE_CATEGORY_NAMES) else str(int(label))
+
+        # Only annotate items that are likely plastics (customize PLASTIC_LIKE_CLASSES)
+        if class_name not in PLASTIC_LIKE_CLASSES:
+            continue
+
+        x1, y1, x2, y2 = map(int, box)
+        cv2.rectangle(frame_bgr, (x1, y1), (x2, y2), (0, 220, 0), 2)
+        label_text = f"{class_name}: {score:.2f}"
+        cv2.putText(frame_bgr, label_text, (x1, max(20, y1 - 10)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 220, 0), 2)
+        count_plastic += 1
+
+    # Overlay count (always visible)
+    cv2.putText(frame_bgr, f"Plastic Count: {count_plastic}", (10, 25),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+    return frame_bgr, count_plastic
+
+# -------------------- Run on single image --------------------
+def run_on_image(image_path):
+    if not os.path.exists(image_path):
+        print(f"❌ Error: file not found -> {image_path}")
+        return
+    frame = cv2.imread(image_path)
+    if frame is None:
+        print("❌ Error: failed to read image (cv2.imread returned None). Check format.")
+        return
+
+    out_frame, count = detect_and_draw(frame)
+    print(f"Detections (plastic-like): {count}")
+    cv2.imshow("Plastic Detection - Image", out_frame)
+    print("Press any key on the image window to close it.")
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    cv2.waitKey(1)  # flush
+
+# -------------------- Run on webcam --------------------
+def run_on_camera():
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # use CAP_DSHOW on Windows for better behaviour
+    if not cap.isOpened():
+        print("❌ Camera not detected. Check webcam or camera index.")
+        return
+
+    print(f"✅ Camera started. Press '{chr(QUIT_KEY)}' in the video window to quit.")
+    frame_idx = 0
+    last_time = time.time()
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                print("⚠️ Unable to read frame from camera.")
+                break
+
+            # Resize smaller to reduce inference time (optional)
+            frame_small = cv2.resize(frame, (640, 480))
+
+            # Only run model every N frames to improve responsiveness
+            if frame_idx % PROCESS_EVERY_N_FRAMES == 0:
+                out_frame, _ = detect_and_draw(frame_small)
+            else:
+                out_frame = frame_small
+
+            cv2.imshow(WINDOW_NAME, out_frame)
+
+            # Make sure the OpenCV window has focus when pressing the key
+            if cv2.waitKey(10) & 0xFF == QUIT_KEY:
+                print("🛑 Exiting camera feed...")
+                break
+
+            frame_idx += 1
+
+            # (optional) show FPS in terminal once per second
+            if time.time() - last_time >= 1.0:
+                last_time = time.time()
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+        cv2.waitKey(1)  # flush events
+
+# -------------------- Main --------------------
+def main():
+    print("\nSelect mode:")
+    print("1. Detect plastics in an image")
+    print("2. Detect plastics using laptop camera (optional)")
+    choice = input("Enter your choice (1/2): ").strip()
+
+    if choice == "1":
+        img_path = input("Enter image path (e.g., data/test.jpg): ").strip()
+        run_on_image(img_path)
+    elif choice == "2":
+        run_on_camera()
+    else:
+        print("❌ Invalid choice. Please enter 1 or 2.")
+
+if __name__ == "__main__":
+    main()
